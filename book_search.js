@@ -22,34 +22,37 @@
     /** You will need to implement your search and 
      * return the appropriate object here. */
 
-    var result = {
-        "SearchTerm": "",
-        "Results": []
-    };
 
     let resArr = [];
 
-    let term = searchTerm;
-
-    for(var book of scannedTextObj)
-    {
-        let [title, ISBN, content] = book;
-        
-        for (var quote in content)
+    for(const book of scannedTextObj)
+    {   
+        //let hyphen = 0;
+        // let lastspace;
+        for (const quote of book.Content)
         {
-            let [page, line, text] = quote;
-            let pos = text.search(term);
+
+            let pos = quote.Text.search(searchTerm);
             if (pos > -1)
             {
-                resArr.push(pos);
+                let item = {
+                    "ISBN": book.ISBN,
+                    "Page": quote.Page,
+                    "Line": quote.Line
+                }
+                resArr.push(item);
             }
 
         }
-
-
+        
     }
+
+    var result = {
+        "SearchTerm": searchTerm,
+        "Results": resArr
+    };
     
-    return resArr; 
+    return result; 
 }
 
 /** Example input object. */
