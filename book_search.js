@@ -23,25 +23,86 @@
      * return the appropriate object here. */
 
 
-    let resArr = [];
+    let resArr = []; //array to hold search results
 
     for(const book of scannedTextObj)
     {   
-        //let hyphen = 0;
-        // let lastspace;
+        //this code deals with hyphenated words
+        //this indicates whether or not the current line STARTS with a hyphenated word
+        let hyphen = 0; 
+        //this holds the part of the hyphenated word that was on the LAST line
+        let lastword;
+        //this holds the last used line number
+        let lastline;
+        //this holds the last used page
+        let lastpage;
         for (const quote of book.Content)
         {
+            let words = quote.Text;
 
-            let pos = quote.Text.search(searchTerm);
+            //this is for when the lines aren't consecutive
+            //it will also account for lines that are hyphenated across pages
+            if  (lastpage == quote.Page)
+            {
+                if (lastline != quote.Line -1)
+                {
+                    hyphen = 0
+                }
+            }
+            else if (lastpage == quote.Page - 1)
+            {
+                if (quote.Line != 1)
+                {
+                    hyphen = 0
+                }
+            }
+            else
+            {
+                hyphen = 0
+            }
+
+            //appends hyphenated word onto current line
+            if (hyphen == 1)
+            {
+                words = lastword+words;
+            }
+
+            let pos = words.search(searchTerm);
+            //fixes line number if quoted line is hyphenated
+            quoteline = quote.Line
+            if (pos == 0 && hyphen == 1)
+            {
+                quoteline = lastline
+            }
+
+            //pushes a found term onto the results array
             if (pos > -1)
             {
                 let item = {
                     "ISBN": book.ISBN,
                     "Page": quote.Page,
-                    "Line": quote.Line
+                    "Line": quoteline
                 }
                 resArr.push(item);
             }
+
+            //checks if current line ends with hyphenated word.
+            //sets next line up to properly fix it.
+            let hycheck = words.charAt(words.length - 1);
+            if (hycheck == '-')
+            {
+                hyphen = 1;
+                let lastspace = words.lastIndexOf(" ");
+                lastword = words.slice(lastspace+1, words.length-1);
+
+            }
+            else
+            {
+                hyphen = 0
+            }
+
+            lastline = quote.Line;
+            lastpage = quote.Page;
 
         }
         
@@ -79,6 +140,48 @@ const twentyLeaguesIn = [
         ] 
     }
 ]
+
+//**slightly more complicated output object */
+const fakeBooks = [
+    {
+        "Title": "Book One",
+        "ISBN": "0000000000001",
+        "Content": [
+            {
+                "Page": 3,
+                "Line": 60,
+                "Text": "hyphenation test line. Begin test-"
+            },
+            {
+                "Page": 4,
+                "Line": 1,
+                "Text": "ing of the feature"
+            }
+        ] 
+    },
+    {
+        "Title": "Book Two",
+        "ISBN": "0000000000002",
+        "Content": [
+            {
+                "Page": 50,
+                "Line": 17,
+                "Text": "This line tests if multiple books work properly."
+            },
+            {
+                "Page": 10,
+                "Line": 17,
+                "Text": "now we have to check for nonconsecutive entries. For ex-"
+            },
+            {
+                "Page": 20,
+                "Line": 18,
+                "Text": "ample, the last two entries ARE NOT on consecutive pages."
+            },
+        ] 
+    }
+
+]
     
 /** Example output object */
 const twentyLeaguesOut = {
@@ -89,6 +192,24 @@ const twentyLeaguesOut = {
             "Page": 31,
             "Line": 9
         }
+    ]
+}
+
+//** additional testing output object */
+/** Example output object */
+const fakeTest1 = {
+    "SearchTerm": "line",
+    "Results": [
+        {
+            "ISBN": "0000000000001",
+            "Page": 3,
+            "Line": 60
+        },
+        {
+            "ISBN": "0000000000002",
+            "Page": 50,
+            "Line": 17
+        },
     ]
 }
 
@@ -126,4 +247,63 @@ if (test2result.Results.length == 1) {
     console.log("FAIL: Test 2");
     console.log("Expected:", twentyLeaguesOut.Results.length);
     console.log("Received:", test2result.Results.length);
+}
+
+/** This tests for case-sensitivity */
+const test3result = findSearchTermInBooks("Asked", twentyLeaguesIn); 
+if (test3result.Results.length == 0) {
+    console.log("PASS: Test 3");
+} else {
+    console.log("FAIL: Test 3");
+    console.log("Expected:", 0);
+    console.log("Received:", test3result.Results.length);
+}
+/** This tests for null result */
+const test4result = findSearchTermInBooks("cheese", twentyLeaguesIn); 
+if (test4result.Results.length == 0) {
+    console.log("PASS: Test 4");
+} else {
+    console.log("FAIL: Test 4");
+    console.log("Expected:", 0);
+    console.log("Received:", test4result.Results.length);
+}
+
+/** This tests for proper hyphen handling - basic */
+const test5result = findSearchTermInBooks("darkness", twentyLeaguesIn); 
+if (test5result.Results.length == 1) {
+    console.log("PASS: Test 5");
+} else {
+    console.log("FAIL: Test 5");
+    console.log("Expected:", 1);
+    console.log("Received:", test5result.Results.length);
+}
+
+/** This tests for handling multiple books properly */
+const test6result = findSearchTermInBooks("line", fakeBooks);
+if (JSON.stringify(fakeTest1) === JSON.stringify(test6result)) {
+    console.log("PASS: Test 6");
+} else {
+    console.log("FAIL: Test 6");
+    console.log("Expected:", fakeTest1);
+    console.log("Received:", test6result);
+}
+
+/** This tests for proper hyphen handling - advanced */
+const test7result = findSearchTermInBooks("testing", fakeBooks); 
+if (test7result.Results.length == 1) {
+    console.log("PASS: Test 7");
+} else {
+    console.log("FAIL: Test 7");
+    console.log("Expected:", 1);
+    console.log("Received:", test7result.Results.length);
+}
+
+/** This tests for proper hyphen handling - advanced failure */
+const test8result = findSearchTermInBooks("example", fakeBooks); 
+if (test8result.Results.length == 0) {
+    console.log("PASS: Test 8");
+} else {
+    console.log("FAIL: Test 8");
+    console.log("Expected:", 0);
+    console.log("Received:", test8result.Results.length);
 }
